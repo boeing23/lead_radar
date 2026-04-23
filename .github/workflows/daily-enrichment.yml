@@ -1,0 +1,22 @@
+name: Daily lead enrichment
+on:
+  schedule:
+    # 9am America/New_York = 14:00 UTC winter / 13:00 UTC summer.
+    # We run at both to be safe — the cron handler is idempotent.
+    - cron: "0 13 * * 1-5"
+    - cron: "0 14 * * 1-5"
+  workflow_dispatch: # manual trigger from the Actions tab
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron
+        run: |
+          curl -fsS -X GET "${{ secrets.RADAR_URL }}/api/cron" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            | tee cron-result.json
+      - name: Summary
+        run: |
+          echo "### Enrichment run" >> $GITHUB_STEP_SUMMARY
+          cat cron-result.json >> $GITHUB_STEP_SUMMARY
